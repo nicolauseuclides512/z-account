@@ -1,0 +1,61 @@
+server{
+	listen 80;
+	server_name development.zuragan.com;
+	return 301 https://$host$request_uri;
+}
+
+server {
+	listen 443 ssl;
+
+	ssl_certificate /etc/letsencrypt/live/development.zuragan.com/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/development.zuragan.com/privkey.pem;
+
+	ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+	ssl_prefer_server_ciphers on;
+	ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+
+	root /var/www/public;
+	index index.php index.html index.htm;
+
+	server_name development.zuragan.com;
+
+	client_max_body_size 100M;
+
+	location / {
+		try_files $uri $uri/ /index.php$is_args$args;
+
+        #additional
+        add_header Last-Modified $date_gmt;
+        add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+        if_modified_since off;
+        expires off;
+        etag off;
+	}
+
+	location ~ \.php$ {
+	    try_files $uri /index.php =404;
+            fastcgi_pass fpm:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            include fastcgi_params;
+            fastcgi_read_timeout 600;
+
+            ## Wide-open CORS config for nginx
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' '*';
+                add_header 'Access-Control-Allow-Methods' 'POST, PUT, DELETE, OPTIONS, HEAD, GET';
+                add_header 'Access-Control-Allow-Headers' 'Content-type, Origin, Accept, Authorization, X-Header-Organization-Id,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,,Content-Range,Range';
+                add_header 'Access-Control-Max-Age' 1728000;
+
+                #additional
+                add_header 'Last-Modified' $date_gmt;
+                add_header 'Cache-Control' 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+                #if_modified_since off;
+                expires off;
+                #etag off;
+
+                return 204;
+            }
+
+	}
+}
